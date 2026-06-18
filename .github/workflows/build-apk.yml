@@ -35,6 +35,9 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Generar icono y splash (Q negra sobre verde)
+        run: npx @capacitor/assets generate --android --iconBackgroundColor "#00C853" --iconBackgroundColorDark "#00C853" --splashBackgroundColor "#00C853" --splashBackgroundColorDark "#00C853"
+
       - name: Add Transistorsoft maven repo
         run: |
           python3 - <<'PY'
