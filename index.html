@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reparto QUILUHOGAR</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f4f4f4;color:#333}
+  header{background:#fff159;color:#2d3277;padding:14px 16px;position:sticky;top:0;z-index:5}
+  header h1{font-size:18px;margin:0}
+  .panel{padding:14px 16px;background:#fff;border-bottom:1px solid #eee}
+  select,button{font-size:16px;border-radius:10px}
+  select{width:100%;padding:12px;border:1px solid #ddd;margin-bottom:10px}
+  button{width:100%;padding:15px;font-weight:700;border:none;cursor:pointer;color:#fff}
+  .start{background:#00a650}.stop{background:#e6443f}
+  .estado{margin-top:10px;font-size:14px;padding:11px;border-radius:8px;display:none}
+  .ok{background:#e8f8ee;color:#067a3a;display:block}.err{background:#fdeceb;color:#c0392b;display:block}
+  .aviso{background:#fff8e1;color:#7a5c00;font-size:12.5px;border-radius:8px;padding:10px;margin-top:10px;line-height:1.45}
+  h2{font-size:13px;text-transform:uppercase;color:#888;padding:14px 16px 4px;margin:0}
+  .card{background:#fff;margin:8px 12px;border-radius:12px;padding:13px 14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .card .p{font-weight:700;font-size:15px}
+  .card .d{color:#555;font-size:13px;margin:4px 0}
+  .card .est{display:inline-block;color:#fff;padding:2px 9px;border-radius:10px;font-size:12px}
+  .maps{display:inline-block;margin-top:6px;background:#3483fa;color:#fff;padding:9px 13px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600}
+  .vacio{padding:16px;color:#999;font-size:14px}
+</style>
+</head>
+<body>
+<header><h1>🚚 Reparto QUILUHOGAR</h1></header>
+
+<div class="panel">
+  <select id="quien"><option value="">¿Quién sos?</option></select>
+  <button class="start" id="btnStart">Empezar a compartir ubicación</button>
+  <button class="stop" id="btnStop" style="display:none">Dejar de compartir</button>
+  <div class="estado" id="estado"></div>
+  <div class="aviso" id="aviso" style="display:none">📌 Mientras compartís, va a aparecer una notificación fija. Eso mantiene la ubicación funcionando aunque cierres la app o bloquees la pantalla.</div>
+</div>
+
+<h2>Mis paquetes (<span id="cnt">0</span>)</h2>
+<div id="lista"><div class="vacio">Elegí tu nombre para ver tus paquetes.</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="config.js"></script>
+<script>
+let db, rosterRef, asgRef, driverRef;
+let roster={}, miId='', watcherId=null, compartiendo=false, jsWatch=null;
+const $=s=>document.querySelector(s);
+function msg(t,c){ const e=$('#estado'); e.textContent=t; e.className='estado '+c; }
+const EST={pendiente:'Pendiente',en_camino:'En camino',entregado:'Entregado'};
+const ESTC={pendiente:'#f5a623',en_camino:'#3483fa',entregado:'#00a650'};
+
+try{ firebase.initializeApp(window.FIREBASE_CONFIG); db=firebase.database(); }
+catch(e){ msg('Error de configuración.','err'); }
+
+if(db){
+  rosterRef=db.ref('rooms/'+CODIGO_LOGISTICA+'/roster');
+  asgRef=db.ref('rooms/'+CODIGO_LOGISTICA+'/assignments');
+  rosterRef.on('value',s=>{
+    roster=s.val()||{};
+    const sel=$('#quien'); const prev=localStorage.getItem('rep_id')||miId;
+    sel.innerHTML='<option value="">¿Quién sos?</option>'+Object.keys(roster).map(id=>`<option value="${id}">${roster[id].name}</option>`).join('');
+    if(prev && roster[prev]){ sel.value=prev; if(!miId) elegir(prev); }
+  });
+  asgRef.on('value',s=>pintar(s.val()||{}));
+}
+
+function elegir(id){ miId=id; localStorage.setItem('rep_id',id); driverRef=db.ref('rooms/'+CODIGO_LOGISTICA+'/drivers/'+id); asgRef.once('value').then(s=>pintar(s.val()||{})); }
+$('#quien').onchange=e=>elegir(e.target.value);
+
+function pintar(asg){
+  const cont=$('#lista');
+  if(!miId){ cont.innerHTML='<div class="vacio">Elegí tu nombre para ver tus paquetes.</div>'; $('#cnt').textContent='0'; return; }
+  const mios=Object.values(asg).filter(a=>a&&a.driverId===miId);
+  $('#cnt').textContent=mios.length;
+  if(!mios.length){ cont.innerHTML='<div class="vacio">No tenés paquetes asignados todavía.</div>'; return; }
+  cont.innerHTML=mios.map(a=>{ const c=ESTC[a.estado]||'#666';
+    const maps=a.direccion?`<a class="maps" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.direccion)}">🗺️ Abrir en Maps</a>`:'';
+    return `<div class="card"><div class="p">${a.producto||'Paquete'}</div>`+
+      (a.direccion?`<div class="d">📍 ${a.direccion}</div>`:'')+(a.nota?`<div class="d">📝 ${a.nota}</div>`:'')+
+      `<span class="est" style="background:${c}">${EST[a.estado]||a.estado||''}</span><br>${maps}</div>`; }).join('');
+}
+
+function enviar(lat,lng,extra){ if(!driverRef)return; driverRef.set(Object.assign({name:roster[miId]?roster[miId].name:miId,lat:lat,lng:lng,ts:Date.now()},extra||{})); msg('✅ Compartiendo ubicación… ('+new Date().toLocaleTimeString('es-AR')+')','ok'); }
+
+const BG = (window.Capacitor && Capacitor.registerPlugin) ? Capacitor.registerPlugin('BackgroundGeolocation') : null;
+
+async function start(){
+  if(!miId){ msg('Elegí tu nombre primero.','err'); return; }
+  $('#btnStart').style.display='none'; $('#btnStop').style.display='block'; $('#aviso').style.display='block'; $('#quien').disabled=true;
+  compartiendo=true; msg('Iniciando… esperando ubicación.','ok');
+  if(BG){
+    try{
+      watcherId = await BG.addWatcher({
+        backgroundMessage: "Compartiendo tu ubicación de reparto.",
+        backgroundTitle: "Reparto en curso",
+        requestPermissions: true,
+        stale: false,
+        distanceFilter: 15
+      }, (location, error) => {
+        if(error){ msg('GPS: '+(error.message||error.code),'err'); return; }
+        if(location){ enviar(location.latitude, location.longitude, {acc:location.accuracy||null, speed:location.speed||null}); }
+      });
+    }catch(e){ msg('No pude iniciar el GPS en segundo plano: '+e.message,'err'); }
+  }else{
+    // fallback navegador (sin segundo plano real)
+    if(!navigator.geolocation){ msg('Este equipo no permite ubicación.','err'); return; }
+    jsWatch=navigator.geolocation.watchPosition(p=>enviar(p.coords.latitude,p.coords.longitude,{acc:p.coords.accuracy}),
+      e=>msg('GPS: '+e.message,'err'),{enableHighAccuracy:true,maximumAge:3000,timeout:25000});
+  }
+}
+
+async function stop(){
+  compartiendo=false;
+  if(BG && watcherId){ try{ await BG.removeWatcher({id:watcherId}); }catch(e){} watcherId=null; }
+  if(jsWatch!=null){ navigator.geolocation.clearWatch(jsWatch); jsWatch=null; }
+  if(driverRef) driverRef.remove();
+  $('#btnStart').style.display='block'; $('#btnStop').style.display='none'; $('#aviso').style.display='none'; $('#quien').disabled=false;
+  msg('Dejaste de compartir.','err');
+}
+
+$('#btnStart').onclick=start;
+$('#btnStop').onclick=stop;
+</script>
+</body>
+</html>
