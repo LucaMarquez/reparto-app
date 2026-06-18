@@ -1,0 +1,69 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Patch AndroidManifest (permisos de ubicacion en segundo plano)
+        run: |
+          python3 - <<'PY'
+          import re
+          p = "android/app/src/main/AndroidManifest.xml"
+          s = open(p, encoding="utf-8").read()
+          perms = (
+              '    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n'
+              '    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n'
+              '    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />\n'
+              '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n'
+              '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />\n'
+              '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'
+          )
+          if "ACCESS_BACKGROUND_LOCATION" not in s:
+              s = re.sub(r'(<manifest[^>]*>)', r'\1\n' + perms, s, count=1)
+          open(p, "w", encoding="utf-8").write(s)
+          print("Manifest OK")
+          PY
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: reparto-quiluhogar-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
