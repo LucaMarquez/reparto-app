@@ -15,13 +15,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -29,10 +29,26 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Bundle web app (esbuild)
+        run: npm run bundle
+
       - name: Add Android platform
         run: npx cap add android
 
-      - name: Patch AndroidManifest (permisos de ubicacion en segundo plano)
+      - name: Add Transistorsoft maven repo
+        run: |
+          python3 - <<'PY'
+          p = "android/build.gradle"
+          s = open(p, encoding="utf-8").read()
+          repo = '        maven { url "https://maven.transistorsoft.com" }\n'
+          if "maven.transistorsoft.com" not in s and "allprojects" in s:
+              import re
+              s = re.sub(r'(allprojects\s*\{\s*repositories\s*\{)', r'\1\n' + repo, s, count=1)
+          open(p, "w", encoding="utf-8").write(s)
+          print("repo step done")
+          PY
+
+      - name: Patch AndroidManifest (permisos)
         run: |
           python3 - <<'PY'
           import re
