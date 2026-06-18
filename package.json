@@ -2,13 +2,17 @@
   "name": "reparto-quiluhogar",
   "version": "1.0.0",
   "private": true,
-  "description": "App de reparto QUILUHOGAR - ubicacion en segundo plano",
+  "description": "App de reparto QUILUHOGAR - ubicacion en segundo plano (motor Transistorsoft)",
+  "scripts": {
+    "bundle": "esbuild src/app.js --bundle --outfile=www/app.js --format=iife --platform=browser"
+  },
   "dependencies": {
-    "@capacitor/android": "^6.2.0",
-    "@capacitor/core": "^6.2.0",
-    "@capacitor-community/background-geolocation": "^1.2.26"
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@transistorsoft/capacitor-background-geolocation": "^9.1.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.2.0"
+    "@capacitor/cli": "^8.0.0",
+    "esbuild": "^0.24.0"
   }
 }
