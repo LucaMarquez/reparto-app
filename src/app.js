@@ -46,10 +46,16 @@ function pintar(asg){
 
 async function prepararBG(){
   if (listo) return;
+  // Latido: aunque el repartidor esté quieto, manda la posición cada ~60s
+  BackgroundGeolocation.onHeartbeat(() => {
+    BackgroundGeolocation.getCurrentPosition({ samples: 1, persist: true }).catch(() => {});
+  });
   await BackgroundGeolocation.ready({
     desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
-    distanceFilter: 15,
+    distanceFilter: 10,
     locationUpdateInterval: 15000,
+    heartbeatInterval: 60,
+    preventSuspend: true,
     stopOnTerminate: false,
     startOnBoot: true,
     foregroundService: true,
