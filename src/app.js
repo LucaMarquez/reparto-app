@@ -14,7 +14,7 @@ const $ = s => document.querySelector(s);
 const EST = { pendiente:'Pendiente', en_camino:'En camino', entregado:'Entregado' };
 const ESTC = { pendiente:'#f5a623', en_camino:'#3483fa', entregado:'#00a650' };
 
-let roster = {}, miId = '', listo = false, compartiendo = false;
+let roster = {}, miId = '', listo = false, compartiendo = false, iniciando = false;
 function msg(t, c){ const e = $('#estado'); e.textContent = t; e.className = 'estado ' + c; }
 
 rosterRef.on('value', s => {
@@ -79,16 +79,21 @@ async function prepararBG(){
 
 async function start(){
   if (!miId){ msg('Elegí tu nombre primero.', 'err'); return; }
+  if (iniciando) return;            // evita doble inicio (causa del error "Waiting for previous start")
+  iniciando = true;
   $('#btnStart').style.display = 'none'; $('#btnStop').style.display = 'block'; $('#aviso').style.display = 'block'; $('#quien').disabled = true;
   compartiendo = true; msg('Iniciando ubicación en segundo plano…', 'ok');
   try {
     await prepararBG();
     await BackgroundGeolocation.setConfig({ url: DB_URL + '/rooms/' + CODIGO + '/drivers/' + miId + '.json' });
-    await BackgroundGeolocation.start();
+    const st = await BackgroundGeolocation.getState();
+    if (!st.enabled) { await BackgroundGeolocation.start(); }   // solo inicia si no estaba ya activo
     await BackgroundGeolocation.getCurrentPosition({ samples: 1, persist: true });
     msg('✅ Compartiendo ubicación en segundo plano.', 'ok');
   } catch (e) {
     msg('No pude iniciar: ' + (e.message || e), 'err');
+  } finally {
+    iniciando = false;
   }
 }
 
