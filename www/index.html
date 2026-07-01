@@ -24,6 +24,12 @@
   .card .est{display:inline-block;color:#fff;padding:2px 9px;border-radius:10px;font-size:12px}
   .maps{display:inline-block;margin-top:6px;background:#3483fa;color:#fff;padding:9px 13px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600}
   .vacio{padding:16px;color:#999;font-size:14px}
+  .scan{background:#2d3277}
+  #reader{margin:10px 0;border-radius:12px;overflow:hidden}
+  #reader:empty{margin:0}
+  .scaninfo{background:#eef1ff;color:#2d3277;font-size:13px;border-radius:8px;padding:10px;margin-top:10px;display:none;line-height:1.45}
+  .scaninfo.show{display:block}
+  .scaninfo button{margin-top:8px;background:#00a650}
 </style>
 </head>
 <body>
@@ -37,11 +43,19 @@
   <div class="aviso" id="aviso" style="display:none">📌 La primera vez, Android te va a pedir el permiso de ubicación: elegí <b>"Permitir todo el tiempo"</b>. Con eso, la ubicación sigue andando con la app cerrada o la pantalla apagada.</div>
 </div>
 
+<div class="panel">
+  <button class="scan" id="btnScan">📷 Escanear etiqueta de Mercado Libre</button>
+  <button class="stop" id="btnScanStop" style="display:none">Cerrar cámara</button>
+  <div id="reader"></div>
+  <div class="scaninfo" id="scaninfo"></div>
+</div>
+
 <h2>Mis paquetes (<span id="cnt">0</span>)</h2>
 <div id="lista"><div class="vacio">Elegí tu nombre para ver tus paquetes.</div></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body>
