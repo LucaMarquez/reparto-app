@@ -66,6 +66,8 @@ jobs:
               '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n'
               '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />\n'
               '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'
+              '    <uses-permission android:name="android.permission.CAMERA" />\n'
+              '    <uses-feature android:name="android.hardware.camera" android:required="false" />\n'
           )
           if "ACCESS_BACKGROUND_LOCATION" not in s:
               s = re.sub(r'(<manifest[^>]*>)', r'\1\n' + perms, s, count=1)
