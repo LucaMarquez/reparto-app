@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,3 +88,11 @@ jobs:
           name: reparto-quiluhogar-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: Publicar APK en un link fijo (Release)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Reparto QUILUHOGAR — instalador"
+          body: "Última versión de la app. Descargá app-debug.apk e instalala en el celular."
+          files: android/app/build/outputs/apk/debug/app-debug.apk
